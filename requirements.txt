@@ -1,0 +1,4 @@
+requests
+virtualenv
+beautifulsoup4
+psycopg2
