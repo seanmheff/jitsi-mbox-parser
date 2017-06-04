@@ -2,3 +2,4 @@ requests
 virtualenv
 beautifulsoup4
 psycopg2
+pytz

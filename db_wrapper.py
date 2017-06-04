@@ -136,6 +136,10 @@ def get_person(email):
     query = 'SELECT * from people WHERE email like %s'
     return __perform__(query, (email,), method='fetchone')
 
+def get_thread(title):
+    query = 'SELECT * from threads WHERE title like %s'
+    return __perform__(query, (title,), method='fetchone')
+
 
 
 ######################
@@ -143,7 +147,7 @@ def get_person(email):
 ######################
 
 def create_message(id, date, in_reply_to, content, person_id, thread_id):
-    query = 'INSERT INTO messages (id, date, in_reply_to, content, person_id, thread_id) VALUES (%s, %s, %s, %s, %s, %s)'
+    query = 'INSERT INTO messages (id, date, in_reply_to, content, person_id, thread_id) VALUES (%s, %s, %s, %s, %s, %s) ON CONFLICT DO NOTHING'
     __perform__(query, (id, date, in_reply_to, content, person_id, thread_id))
 
 def create_person(name, email):
@@ -151,5 +155,5 @@ def create_person(name, email):
     __perform__(query, (name, email))
 
 def create_thread(message_id, title, person_id, date):
-    query = 'INSERT INTO threads (id, title, person_id, date) VALUES (%s, %s, %s, %s)'
+    query = 'INSERT INTO threads (id, title, person_id, date) VALUES (%s, %s, %s, %s) ON CONFLICT DO NOTHING'
     __perform__(query, (message_id, title, person_id, date))
