@@ -1,4 +1,5 @@
 import email.utils as email_utils
+import email.header as email_header
 import mailbox
 import requests
 import bs4
@@ -8,14 +9,18 @@ import time
 import re
 import pytz
 
-
 name_regex = re.compile('.*\((?P<name>.*?)\)')
-email_regex = re.compile('(?P<username>.*) at (?P<domain>.*?) .*')
+email_regex = re.compile('(?P<username>.*) at (?P<domain>.*?) .*') 
 
+def decode_mime_words(s):
+    return u''.join(
+        word.decode(encoding or 'utf8') if isinstance(word, bytes) else word
+        for word, encoding in email_header.decode_header(s))
 
 def parse_name(from_string):
     result = name_regex.search(from_string)
-    return result.group('name')
+    result = result.group('name')
+    return decode_mime_words(str(result))
 
 def parse_email(from_string):
     result = email_regex.search(from_string)
@@ -72,7 +77,6 @@ for link in links:
     # Read the data into a python mailbox
     monthly_mailbox = mailbox.mbox('/tmp/' + str(link))
 
-    # print(len(monthly_mailbox))
     # There is a bug in mailbox that can cause issues parsing if 
     # the email contains a line that starts with the string: "From" 
     # monthly_mailbox = list(filter(lambda email: email.get('Date') is not None, monthly_mailbox)
@@ -92,38 +96,16 @@ for link in links:
     for email in monthly_mailbox.values():
         print(email.get('Date'))
 
-        # Create a Person
-        try:
-            name = parse_name(email.get('From'))
-        except TypeError as e:
-            print('error parsing email: ' + str(email))
-            continue
-
-        email_addr = parse_email(email.get('From'))
-        db_wrapper.create_person(name, email_addr)
-
         # Get some data that we need later
         message_id = email.get('Message-ID')
-        subject = email.get('Subject')
+        email_addr = parse_email(str(email.get('From')))
+        name = parse_name(str(email.get('From')))
         date = email_utils.parsedate_to_datetime(email.get('Date'))
+        subject = str(email.get('Subject'))
         in_reply_to = email.get('In-Reply-To')
-        content = email.get_payload()
+        content = str(email.get_payload(decode=True), 'utf-8')
 
-        # Check for a existing thread with the name
-        existing_thread = db_wrapper.get_thread(subject)
-
-
-        if existing_thread is None:
-            # Create a new Thread
-            # print('No parent email. Creating new thread')
-            db_wrapper.create_thread(message_id, subject, email_addr, date)
-
-            # Create a message
-            db_wrapper.create_message(message_id, date, in_reply_to, content, email_addr, message_id)
-        else:
-            # Don't create a new Thread - use parent_emails thread_id
-            # print('Parent email. Not creating new thread')
-            thread_id = existing_thread[0] # Last column in tuple
-            db_wrapper.create_message(message_id, date, in_reply_to, content, email_addr, thread_id)
+        # Create a message
+        db_wrapper.create_message(message_id, email_addr, name, date, subject, in_reply_to, content)
 
     monthly_mailbox.close()

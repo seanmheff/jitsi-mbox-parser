@@ -1,5 +1,4 @@
 import psycopg2
-import datetime
 
 conn_str = """
     dbname='scraper'
@@ -10,6 +9,7 @@ conn_str = """
 
 try:
     conn = psycopg2.connect(conn_str)
+    print(conn.encoding)
 except Exception as e:
     print("I am unable to connect to the database.")
     print(e)
@@ -33,6 +33,21 @@ def __perform__(*args, method=None):
         cursor.close()
 
 
-def create_message(id, email, name, date, subject, in_reply_to, content):
-    query = """INSERT INTO messages (id, email, name, date, subject, in_reply_to, content) VALUES (%s, %s, %s, %s, %s, %s, %s) ON CONFLICT DO NOTHING"""
-    __perform__(query, (id, email, name, date, subject, in_reply_to, content))
+def create_table():
+    __perform__("""CREATE TABLE messages (
+        id              VARCHAR         PRIMARY KEY,
+        email           VARCHAR         NOT NULL,
+        name            VARCHAR         NOT NULL,
+        date            TIMESTAMPTZ     NOT NULL,
+        subject         VARCHAR         NOT NULL,
+        in_reply_to     VARCHAR,
+        content         TEXT            NOT NULL
+    )""")
+
+
+def drop_table():
+    __perform__('DROP TABLE IF EXISTS messages')
+
+
+drop_table()
+create_table()
